@@ -8,6 +8,52 @@ from .models import StringRecord
 from .serializers import StringRecordSerializer
 
 
+def normalize_string(s: str) -> str:
+    """Normalize string for comparison."""
+    return s.strip().lower()
+
+
+def is_palindrome(s: str) -> bool:
+    """Check if string is a palindrome ignoring spaces and case."""
+    normalized = normalize_string(s).replace(" ", "")
+    return normalized == normalized[::-1]
+
+
+def parse_nl_filters(query: str) -> dict:
+    """Parse a natural language query into multiple filters."""
+    filters = {}
+    q = query.lower()
+
+    if "palindrome" in q or "palindromic" in q:
+        filters["is_palindrome"] = True
+    if "single word" in q or "one word" in q:
+        filters["word_count"] = 1
+    if match := re.search(r"longer than (\d+)", q):
+        filters["min_length"] = int(match.group(1)) + 1
+    if match := re.search(r"shorter than (\d+)", q):
+        filters["max_length"] = int(match.group(1)) - 1
+    if match := re.search(r"letter ([a-z])", q):
+        filters["contains_character"] = match.group(1)
+    
+    return filters
+
+
+def apply_filters(queryset, filters: dict):
+    """Apply multiple filters to a queryset."""
+    for key, value in filters.items():
+        if key == "is_palindrome":
+            queryset = [obj for obj in queryset if is_palindrome(obj.value)]
+        elif key == "word_count":
+            queryset = [obj for obj in queryset if len(obj.value.split()) == value]
+        elif key == "min_length":
+            queryset = [obj for obj in queryset if len(obj.value) >= value]
+        elif key == "max_length":
+            queryset = [obj for obj in queryset if len(obj.value) <= value]
+        elif key == "contains_character":
+            queryset = [obj for obj in queryset if value in normalize_string(obj.value)]
+    return queryset
+
+
 class StringAPIView(APIView):
     """
     Handles:
@@ -18,11 +64,6 @@ class StringAPIView(APIView):
     """
 
     def get(self, request, string_value=None):
-        """
-        Handles:
-        - GET /strings/ → Get all with optional query filters
-        - GET /strings/<string_value>/ → Get one
-        """
         if string_value:
             # Retrieve a specific string
             sha256_hash = hashlib.sha256(string_value.encode()).hexdigest()
@@ -42,43 +83,41 @@ class StringAPIView(APIView):
             }
             return Response(data, status=status.HTTP_200_OK)
 
-        # Otherwise: list all strings with optional filters
-        queryset = StringRecord.objects.all()
+        # List all strings with optional query filters
+        queryset = list(StringRecord.objects.all())
         params = request.query_params
+        filters = {}
 
         try:
             if "is_palindrome" in params:
-                val = params["is_palindrome"].lower()
-                queryset = queryset.filter(is_palindrome=(val == "true"))
+                filters["is_palindrome"] = params["is_palindrome"].lower() == "true"
             if "min_length" in params:
-                queryset = queryset.filter(length__gte=int(params["min_length"]))
+                filters["min_length"] = int(params["min_length"])
             if "max_length" in params:
-                queryset = queryset.filter(length__lte=int(params["max_length"]))
+                filters["max_length"] = int(params["max_length"])
             if "word_count" in params:
-                queryset = queryset.filter(word_count=int(params["word_count"]))
+                filters["word_count"] = int(params["word_count"])
             if "contains_character" in params:
-                queryset = queryset.filter(value__icontains=params["contains_character"])
+                filters["contains_character"] = params["contains_character"].lower()
         except ValueError:
             return Response(
                 {"error": "Invalid query parameter types."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        queryset = apply_filters(queryset, filters)
+
         serializer = StringRecordSerializer(queryset, many=True)
-        filters = {k: v for k, v in params.items() if v}
         return Response(
             {
                 "data": serializer.data,
-                "count": queryset.count(),
+                "count": len(queryset),
                 "filters_applied": filters,
             },
             status=status.HTTP_200_OK,
         )
 
     def post(self, request):
-        """
-        Handles POST /strings/ → Analyze and create a new string record
-        """
         value = request.data.get("value")
         if value is None:
             return Response(
@@ -100,10 +139,9 @@ class StringAPIView(APIView):
                 status=status.HTTP_409_CONFLICT,
             )
 
-        # Compute properties
         properties = {
             "length": len(value),
-            "is_palindrome": value.lower() == value[::-1].lower(),
+            "is_palindrome": is_palindrome(value),
             "unique_characters": len(set(value)),
             "word_count": len(value.split()),
             "sha256_hash": sha256_hash,
@@ -111,7 +149,6 @@ class StringAPIView(APIView):
         }
 
         record = StringRecord.objects.create(value=value, **properties)
-
         response_data = {
             "id": record.sha256_hash,
             "value": record.value,
@@ -121,9 +158,6 @@ class StringAPIView(APIView):
         return Response(response_data, status=status.HTTP_201_CREATED)
 
     def delete(self, request, string_value=None):
-        """
-        Handles DELETE /strings/<string_value>/ → Delete a string record
-        """
         if not string_value:
             return Response(
                 {"error": "String value required for deletion."},
@@ -155,44 +189,21 @@ class StringNaturalLanguageFilterAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        query = query.lower()
-        filters = {}
-
-        # Simple NLP heuristic
-        if "palindromic" in query or "palindrome" in query:
-            filters["is_palindrome"] = True
-        if "single word" in query or "one word" in query:
-            filters["word_count"] = 1
-        if match := re.search(r"longer than (\d+)", query):
-            filters["min_length"] = int(match.group(1)) + 1
-        if match := re.search(r"shorter than (\d+)", query):
-            filters["max_length"] = int(match.group(1)) - 1
-        if match := re.search(r"letter ([a-z])", query):
-            filters["contains_character"] = match.group(1)
-
+        filters = parse_nl_filters(query)
         if not filters:
             return Response(
                 {"error": "Unable to parse natural language query."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        queryset = StringRecord.objects.all()
-        if "is_palindrome" in filters:
-            queryset = queryset.filter(is_palindrome=filters["is_palindrome"])
-        if "word_count" in filters:
-            queryset = queryset.filter(word_count=filters["word_count"])
-        if "min_length" in filters:
-            queryset = queryset.filter(length__gte=filters["min_length"])
-        if "max_length" in filters:
-            queryset = queryset.filter(length__lte=filters["max_length"])
-        if "contains_character" in filters:
-            queryset = queryset.filter(value__icontains=filters["contains_character"])
+        queryset = list(StringRecord.objects.all())
+        queryset = apply_filters(queryset, filters)
 
         serializer = StringRecordSerializer(queryset, many=True)
         return Response(
             {
                 "data": serializer.data,
-                "count": queryset.count(),
+                "count": len(queryset),
                 "interpreted_query": {
                     "original": query,
                     "parsed_filters": filters,
