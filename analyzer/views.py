@@ -364,30 +364,6 @@ def apply_filters_to_iterable(iterable, filters: Dict[str, Any]):
     return results
 
 
-
-
-# def apply_filters_to_iterable(iterable, filters: Dict[str, Any]):
-#     """Apply parsed filters to queryset or iterable of StringRecord."""
-#     results = list(iterable)
-
-#     for key, val in filters.items():
-#         if key == "is_palindrome":
-#             if val:
-#                 results = [r for r in results if r.is_palindrome]
-#             else:
-#                 results = [r for r in results if not r.is_palindrome]
-#         elif key == "word_count":
-#             results = [r for r in results if r.word_count == int(val)]
-#         elif key == "min_length":
-#             results = [r for r in results if r.length >= int(val)]
-#         elif key == "max_length":
-#             results = [r for r in results if r.length <= int(val)]
-#         elif key == "contains_character":
-#             ch = str(val).lower()
-#             results = [r for r in results if ch in normalize_for_compare(r.value)]
-
-
-
 #     return results
 
 # ==============================================================
@@ -537,6 +513,29 @@ class StringAPIView(APIView):
                 {"error": "Internal server error."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # ==============================================================
 # ---------- NLP Query Parsing Utilities ------------------------

@@ -40,6 +40,10 @@ urlpatterns = [
     # /strings/  → base endpoint for POST and GET list
     re_path(r"^$", StringAPIView.as_view(), name="string-analyzer"),
 
+
+    # path('strings/', StringView.as_view(), name='string-endpoint'),
+    # path('strings', StringView.as_view(), name='string-endpoint-no-slash'),
+
     # /strings/<string_value>/  → retrieve or delete
     re_path(r"^(?P<string_value>[^/]+)/?$", StringAPIView.as_view(), name="string-detail"),
 ]

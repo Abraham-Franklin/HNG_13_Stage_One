@@ -31,4 +31,5 @@ from django.urls import path, include
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('strings/', include('analyzer.urls')),  # mount analyzer here
+    path('strings', include('analyzer.urls')),  # mount analyzer here
 ]

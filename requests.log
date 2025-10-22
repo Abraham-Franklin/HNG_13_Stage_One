@@ -989,3 +989,168 @@ Status: 404
 Body: {"detail":"String does not exist in the system."}
 ----------------
 
+
+--- Incoming Request ---
+Method: POST
+Path: /strings/
+Query Params: {}
+Headers: {'Content-Length': '24', 'Content-Type': 'application/json', 'Host': '127.0.0.1:8000', 'User-Agent': 'curl/7.68.0', 'Accept': '*/*'}
+Body: {"value": "hello world"}
+------------------------
+
+
+--- Response ---
+Status: 409
+Body: {"error":"String already exists in the system."}
+----------------
+
+
+--- Incoming Request ---
+Method: POST
+Path: /strings/
+Query Params: {}
+Headers: {'Content-Length': '24', 'Content-Type': 'application/json', 'Host': '127.0.0.1:8000', 'User-Agent': 'curl/7.68.0', 'Accept': '*/*'}
+Body: {"value": "hello world"}
+------------------------
+
+
+--- Response ---
+Status: 409
+Body: {"error":"String already exists in the system."}
+----------------
+
+
+--- Incoming Request ---
+Method: POST
+Path: /strings/
+Query Params: {}
+Headers: {'Content-Length': '18', 'Content-Type': 'application/json', 'Host': '127.0.0.1:8000', 'User-Agent': 'curl/7.68.0', 'Accept': '*/*'}
+Body: {"val": "missing"}
+------------------------
+
+
+--- Response ---
+Status: 400
+Body: {"error":"Missing \"value\" field."}
+----------------
+
+
+--- Incoming Request ---
+Method: POST
+Path: /strings/
+Query Params: {}
+Headers: {'Content-Length': '16', 'Content-Type': 'application/json', 'Host': '127.0.0.1:8000', 'User-Agent': 'curl/7.68.0', 'Accept': '*/*'}
+Body: {"value": 12345}
+------------------------
+
+
+--- Response ---
+Status: 422
+Body: {"error":"\"value\" must be a string."}
+----------------
+
+
+--- Incoming Request ---
+Method: POST
+Path: /strings/
+Query Params: {}
+Headers: {'Content-Length': '13', 'Content-Type': 'application/json', 'Host': '127.0.0.1:8000', 'User-Agent': 'curl/7.68.0', 'Accept': '*/*'}
+Body: {"value": ""}
+------------------------
+
+
+--- Response ---
+Status: 400
+Body: {"error":"\"value\" cannot be empty."}
+----------------
+
+
+--- Incoming Request ---
+Method: GET
+Path: /strings/random-nonexistent-string/
+Query Params: {}
+Headers: {'Content-Length': '', 'Content-Type': 'text/plain', 'Host': '127.0.0.1:8000', 'User-Agent': 'curl/7.68.0', 'Accept': '*/*'}
+Body: 
+------------------------
+
+
+--- Response ---
+Status: 404
+Body: {"detail":"String does not exist in the system."}
+----------------
+
+
+--- Incoming Request ---
+Method: GET
+Path: /strings/
+Query Params: {}
+Headers: {'Content-Length': '', 'Content-Type': 'text/plain', 'Host': '127.0.0.1:8000', 'User-Agent': 'curl/7.68.0', 'Accept': '*/*'}
+Body: 
+------------------------
+
+
+--- Response ---
+Status: 200
+Body: {"data":[{"id":"0081779c287d567d9ca622f4c0cc2ede819b0cc7f286a5f01d8c3c0178191ad6","value":"level","properties":{"length":5,"is_palindrome":true,"unique_characters":3,"word_count":1,"sha256_hash":"0081779c287d567d9ca622f4c0cc2ede819b0cc7f286a5f01d8c3c0178191ad6","character_frequency_map":{"l":2,"e":2,"v":1}},"created_at":"2025-10-21T18:50:20.200309+00:00"},{"id":"72e478c98a7024dd81226a71414c6eba5a2cc2890919d5a17922add015deee50","value":"palindrome test","properties":{"length":15,"is_palindrome":f
+----------------
+
+
+--- Incoming Request ---
+Method: GET
+Path: /strings/
+Query Params: {'is_palindrome': ['true']}
+Headers: {'Content-Length': '', 'Content-Type': 'text/plain', 'Host': '127.0.0.1:8000', 'User-Agent': 'curl/7.68.0', 'Accept': '*/*'}
+Body: 
+------------------------
+
+
+--- Response ---
+Status: 200
+Body: {"data":[{"id":"0081779c287d567d9ca622f4c0cc2ede819b0cc7f286a5f01d8c3c0178191ad6","value":"level","properties":{"length":5,"is_palindrome":true,"unique_characters":3,"word_count":1,"sha256_hash":"0081779c287d567d9ca622f4c0cc2ede819b0cc7f286a5f01d8c3c0178191ad6","character_frequency_map":{"l":2,"e":2,"v":1}},"created_at":"2025-10-21T18:50:20.200309+00:00"}],"count":1,"filters_applied":{"is_palindrome":true},"detail":"Strings retrieved successfully."}
+----------------
+
+
+--- Incoming Request ---
+Method: GET
+Path: /strings/
+Query Params: {'min_length': ['5']}
+Headers: {'Content-Length': '', 'Content-Type': 'text/plain', 'Host': '127.0.0.1:8000', 'User-Agent': 'curl/7.68.0', 'Accept': '*/*'}
+Body: 
+------------------------
+
+
+--- Response ---
+Status: 200
+Body: {"data":[{"id":"0081779c287d567d9ca622f4c0cc2ede819b0cc7f286a5f01d8c3c0178191ad6","value":"level","properties":{"length":5,"is_palindrome":true,"unique_characters":3,"word_count":1,"sha256_hash":"0081779c287d567d9ca622f4c0cc2ede819b0cc7f286a5f01d8c3c0178191ad6","character_frequency_map":{"l":2,"e":2,"v":1}},"created_at":"2025-10-21T18:50:20.200309+00:00"},{"id":"72e478c98a7024dd81226a71414c6eba5a2cc2890919d5a17922add015deee50","value":"palindrome test","properties":{"length":15,"is_palindrome":f
+----------------
+
+
+--- Incoming Request ---
+Method: GET
+Path: /strings/
+Query Params: {'contains_character': ['a'], 'word_count': ['2']}
+Headers: {'Content-Length': '', 'Content-Type': 'text/plain', 'Host': '127.0.0.1:8000', 'User-Agent': 'curl/7.68.0', 'Accept': '*/*'}
+Body: 
+------------------------
+
+
+--- Response ---
+Status: 200
+Body: {"data":[{"id":"72e478c98a7024dd81226a71414c6eba5a2cc2890919d5a17922add015deee50","value":"palindrome test","properties":{"length":15,"is_palindrome":false,"unique_characters":13,"word_count":2,"sha256_hash":"72e478c98a7024dd81226a71414c6eba5a2cc2890919d5a17922add015deee50","character_frequency_map":{"p":1,"a":1,"l":1,"i":1,"n":1,"d":1,"r":1,"o":1,"m":1,"e":2," ":1,"t":2,"s":1}},"created_at":"2025-10-21T18:50:43.698111+00:00"}],"count":1,"filters_applied":{"word_count":2,"contains_character":"a"
+----------------
+
+
+--- Incoming Request ---
+Method: DELETE
+Path: /strings/random-nonexistent-string/
+Query Params: {}
+Headers: {'Content-Length': '', 'Content-Type': 'text/plain', 'Host': '127.0.0.1:8000', 'User-Agent': 'curl/7.68.0', 'Accept': '*/*'}
+Body: 
+------------------------
+
+
+--- Response ---
+Status: 404
+Body: {"error":"String does not exist in the system."}
+----------------
+
