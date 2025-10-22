@@ -446,45 +446,71 @@ class StringAPIView(APIView):
             )
 
     def post(self, request, string_value=None):
-        """Create a new string record."""
+        """Create a new string record (HNG Stage 1 spec-compliant)."""
         try:
-            data = request.data
-            if not isinstance(data, dict):
-                return Response({"error": "Invalid request body."}, status=status.HTTP_400_BAD_REQUEST)
+            # Parse request data safely
+            try:
+                data = request.data
+            except Exception:
+                return Response(
+                    {"error": "Invalid request body."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
-            value = data.get("value")
-            if value is None:
-                return Response({"error": 'Missing "value" field.'}, status=status.HTTP_400_BAD_REQUEST)
+            if not isinstance(data, dict):
+                return Response(
+                    {"error": "Invalid request body. Expected JSON object."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # ---- Validate 'value' ----
+            if "value" not in data:
+                return Response(
+                    {"error": 'Missing "value" field.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            value = data["value"]
             if not isinstance(value, str):
-                return Response({"error": '"value" must be a string.'}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+                return Response(
+                    {"error": '"value" must be a string.'},
+                    status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                )
+
             value = value.strip()
             if not value:
-                return Response({"error": '"value" cannot be empty.'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"error": '"value" cannot be empty.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
+            # ---- Compute properties ----
             props = compute_properties(value)
 
+            # ---- Check duplicates ----
             if StringRecord.objects.filter(sha256_hash=props["sha256_hash"]).exists():
                 return Response(
                     {"error": "String already exists in the system."},
                     status=status.HTTP_409_CONFLICT,
                 )
 
-            try:
-                record = StringRecord.objects.create(
-                    value=value,
-                    length=props["length"],
-                    is_palindrome=props["is_palindrome"],
-                    unique_characters=props["unique_characters"],
-                    word_count=props["word_count"],
-                    sha256_hash=props["sha256_hash"],
-                    character_frequency_map=props["character_frequency_map"],
-                )
-            except IntegrityError:
-                logger.exception("DB IntegrityError creating StringRecord")
-                return Response({"error": "Database error."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            # ---- Create record ----
+            record = StringRecord.objects.create(
+                value=value,
+                length=props["length"],
+                is_palindrome=props["is_palindrome"],
+                unique_characters=props["unique_characters"],
+                word_count=props["word_count"],
+                sha256_hash=props["sha256_hash"],
+                character_frequency_map=props["character_frequency_map"],
+            )
 
             payload = make_response_payload(record)
             return Response(payload, status=status.HTTP_201_CREATED)
+
+        except IntegrityError:
+            logger.exception("DB IntegrityError creating StringRecord")
+            return Response({"error": "Database error."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         except Exception:
             logger.exception("Unexpected error in POST /strings")
@@ -492,6 +518,55 @@ class StringAPIView(APIView):
                 {"error": "Internal server error."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+    # def post(self, request, string_value=None):
+    #     """Create a new string record."""
+    #     try:
+    #         data = request.data
+    #         if not isinstance(data, dict):
+    #             return Response({"error": "Invalid request body."}, status=status.HTTP_400_BAD_REQUEST)
+
+    #         value = data.get("value")
+    #         if value is None:
+    #             return Response({"error": 'Missing "value" field.'}, status=status.HTTP_400_BAD_REQUEST)
+    #         if not isinstance(value, str):
+    #             return Response({"error": '"value" must be a string.'}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+    #         value = value.strip()
+    #         if not value:
+    #             return Response({"error": '"value" cannot be empty.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    #         props = compute_properties(value)
+
+    #         if StringRecord.objects.filter(sha256_hash=props["sha256_hash"]).exists():
+    #             return Response(
+    #                 {"error": "String already exists in the system."},
+    #                 status=status.HTTP_409_CONFLICT,
+    #             )
+
+    #         try:
+    #             record = StringRecord.objects.create(
+    #                 value=value,
+    #                 length=props["length"],
+    #                 is_palindrome=props["is_palindrome"],
+    #                 unique_characters=props["unique_characters"],
+    #                 word_count=props["word_count"],
+    #                 sha256_hash=props["sha256_hash"],
+    #                 character_frequency_map=props["character_frequency_map"],
+    #             )
+    #         except IntegrityError:
+    #             logger.exception("DB IntegrityError creating StringRecord")
+    #             return Response({"error": "Database error."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    #         payload = make_response_payload(record)
+    #         return Response(payload, status=status.HTTP_201_CREATED)
+
+    #     except Exception:
+    #         logger.exception("Unexpected error in POST /strings")
+    #         return Response(
+    #             {"error": "Internal server error."},
+    #             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    #         )
 
     def delete(self, request, string_value=None):
         """Delete a specific string by value."""
